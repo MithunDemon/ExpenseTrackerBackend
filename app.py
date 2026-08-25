@@ -15,7 +15,7 @@ def get_connection():
         host="gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
         user="3AuVePpBYsvB5an.root",
         password="7RgTvg8iQ5Z522S0",
-        database="sys",
+        database="ETAPP",
         port=4000,
         ssl_verify_cert=True,
         ssl_ca="isrgrootx1.pem"
@@ -127,8 +127,8 @@ def register():
 
         insert_query = """
             INSERT INTO users
-            (name, email, password)
-            VALUES (%s, %s, %s)
+            (name, email, password,confirm_password)
+            VALUES (%s, %s, %s,%s)
         """
 
         cursor.execute(
