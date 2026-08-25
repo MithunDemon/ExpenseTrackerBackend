@@ -13,8 +13,8 @@ def get_connection():
 
     return mysql.connector.connect(
         host="gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
-        user="3AuVePpBYsvB5an.root",
-        password="7RgTvg8iQ5Z522S0",
+        user="YOUR_TIDB_USER",
+        password="YOUR_TIDB_PASSWORD",
         database="ETAPP",
         port=4000,
         ssl_verify_cert=True,
@@ -44,12 +44,17 @@ def register():
 
     try:
 
-        # Get JSON data from Android
         data = request.get_json()
 
         print("Received data:", data)
 
-        # Get values
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No JSON data received"
+            }), 400
+
+
         name = data.get("name")
         email = data.get("email")
         password = data.get("password")
@@ -89,7 +94,7 @@ def register():
 
 
         # ==========================================
-        # CHECK EMAIL ALREADY EXISTS
+        # CHECK EMAIL
         # ==========================================
 
         check_query = """
@@ -127,8 +132,8 @@ def register():
 
         insert_query = """
             INSERT INTO users
-            (name, email, password,confirm_password)
-            VALUES (%s, %s, %s,%s)
+            (name, email, password)
+            VALUES (%s, %s, %s)
         """
 
         cursor.execute(
@@ -140,7 +145,7 @@ def register():
 
 
         # ==========================================
-        # CLOSE CONNECTION
+        # CLOSE DATABASE
         # ==========================================
 
         cursor.close()
@@ -173,7 +178,7 @@ def register():
 
 
 # ==========================================
-# START SERVER
+# LOCAL SERVER
 # ==========================================
 
 if __name__ == "__main__":
