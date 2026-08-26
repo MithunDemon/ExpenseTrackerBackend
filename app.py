@@ -1,21 +1,6 @@
-import os
-
 from flask import Flask, request, jsonify
 import mysql.connector
 from werkzeug.security import generate_password_hash
-from dotenv import load_dotenv
-
-
-# ==========================================
-# LOAD ENVIRONMENT VARIABLES
-# ==========================================
-
-load_dotenv()
-
-
-# ==========================================
-# FLASK APP
-# ==========================================
 
 app = Flask(__name__)
 
@@ -27,13 +12,14 @@ app = Flask(__name__)
 def get_connection():
 
     return mysql.connector.connect(
-        host=os.getenv("TIDB_HOST"),
-        user=os.getenv("TIDB_USER"),
-        password=os.getenv("TIDB_PASSWORD"),
-        database=os.getenv("TIDB_DATABASE"),
-        port=int(os.getenv("TIDB_PORT", "4000")),
+        host="gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
+        user="3AuVePpBYsvB5an.root",
+        password="gp2jNUvNbID1CWT5",
+        database="ETAPP",
+        port=4000,
         ssl_verify_cert=True,
-        ssl_ca="isrgrootx1.pem"
+        ssl_verify_identity=True,
+        ssl_ca="/etc/ssl/certs/ca-certificates.crt"
     )
 
 
@@ -41,7 +27,7 @@ def get_connection():
 # HOME
 # ==========================================
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
 
     return jsonify({
@@ -62,26 +48,18 @@ def register():
 
     try:
 
-        # ==========================================
-        # GET JSON DATA
-        # ==========================================
-
+        # Get JSON from Android
         data = request.get_json()
-
-        print("Received data:", data)
 
         if not data:
 
             return jsonify({
                 "success": False,
-                "message": "No JSON data received"
+                "message": "No data received"
             }), 400
 
 
-        # ==========================================
-        # GET FORM VALUES
-        # ==========================================
-
+        # Get values
         name = data.get("name")
         email = data.get("email")
         password = data.get("password")
@@ -89,50 +67,19 @@ def register():
 
 
         # ==========================================
-        # REMOVE EXTRA SPACES
-        # ==========================================
-
-        if name:
-            name = name.strip()
-
-        if email:
-            email = email.strip().lower()
-
-
-        # ==========================================
         # CHECK EMPTY FIELDS
         # ==========================================
 
-        if not name:
+        if not name or not email or not password or not confirm_password:
+
             return jsonify({
                 "success": False,
-                "message": "Name is required"
-            }), 400
-
-
-        if not email:
-            return jsonify({
-                "success": False,
-                "message": "Email is required"
-            }), 400
-
-
-        if not password:
-            return jsonify({
-                "success": False,
-                "message": "Password is required"
-            }), 400
-
-
-        if not confirm_password:
-            return jsonify({
-                "success": False,
-                "message": "Confirm password is required"
+                "message": "All fields are required"
             }), 400
 
 
         # ==========================================
-        # CHECK PASSWORD MATCH
+        # CHECK PASSWORDS
         # ==========================================
 
         if password != confirm_password:
@@ -144,24 +91,28 @@ def register():
 
 
         # ==========================================
-        # CONNECT TO TIDB
+        # DATABASE CONNECTION
         # ==========================================
 
         conn = get_connection()
+
         cursor = conn.cursor()
 
 
         # ==========================================
-        # CHECK EMAIL ALREADY EXISTS
+        # CHECK EMAIL
         # ==========================================
 
-        check_query = """
+        query = """
             SELECT id
             FROM users
             WHERE email = %s
         """
 
-        cursor.execute(check_query, (email,))
+        cursor.execute(
+            query,
+            (email,)
+        )
 
         existing_user = cursor.fetchone()
 
@@ -201,18 +152,11 @@ def register():
         )
 
 
-        # ==========================================
-        # SAVE DATA
-        # ==========================================
-
         conn.commit()
 
 
-        print("User registered successfully:", name, email)
-
-
         # ==========================================
-        # SUCCESS RESPONSE
+        # SUCCESS
         # ==========================================
 
         return jsonify({
@@ -225,19 +169,10 @@ def register():
 
     except Exception as e:
 
-        # ==========================================
-        # ROLLBACK IF ERROR
-        # ==========================================
-
         if conn:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
+            conn.rollback()
 
-
-        print("ERROR:", str(e))
-
+        print("ERROR:", e)
 
         return jsonify({
             "success": False,
@@ -247,32 +182,15 @@ def register():
 
     finally:
 
-        # ==========================================
-        # CLOSE CURSOR
-        # ==========================================
-
         if cursor:
-
-            try:
-                cursor.close()
-            except Exception:
-                pass
-
-
-        # ==========================================
-        # CLOSE CONNECTION
-        # ==========================================
+            cursor.close()
 
         if conn:
-
-            try:
-                conn.close()
-            except Exception:
-                pass
+            conn.close()
 
 
 # ==========================================
-# LOCAL SERVER
+# RUN FLASK
 # ==========================================
 
 if __name__ == "__main__":
